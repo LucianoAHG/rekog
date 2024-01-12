@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+    <title>Formulario de Carga</title>
+</head>
+<body class="bg-light">
+
+    <div class="container mt-5 mt-5-custom">
+        <h2 class="mb-4 text-center">Formulario de Carga</h2>
+
+        <!-- Agrega un elemento de video para mostrar la captura de la camara -->
+        <video id="camara" width="100%" height="auto" style="display: none;" playsinline autoplay muted></video>
+
+
+        <form action="{{ url_for('formulario_carga') }}" method="post">
+            <!-- Agrega un campo oculto para enviar la captura de la camara como datos de formulario -->
+            <input type="hidden" id="captura" name="captura" required>
+
+            <div class="form-group">
+                <label for="cedula">Cedula de Identidad:</label>
+                <input type="file" accept="image/*" capture="camera" class="form-control" id="cedula" name="cedula" required>
+            </div>
+
+            <button type="button" onclick="activarDesactivarCamara()" class="btn btn-primary btn-block">Tomar Captura</button>
+            <button type="submit" class="btn btn-success btn-block">Enviar Formulario</button>
+        </form>
+    </div>
+
+    <!-- Agrega el script JavaScript para la captura de la camara -->
+    <script>
+        let camaraActivada = false;
+
+        // Funcion para activar/desactivar la camara
+        async function activarDesactivarCamara() {
+            const video = document.getElementById('camara');
+            const botonCaptura = document.querySelector('.btn-primary');
+
+            try {
+                if (!camaraActivada) {
+                    // Activar la camara
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    botonCaptura.textContent = 'Tomar Captura';
+                } else {
+                    // Desactivar la camara
+                    const stream = video.srcObject;
+                    const tracks = stream.getTracks();
+
+                    tracks.forEach(track => track.stop());
+                    video.srcObject = null;
+                    video.style.display = 'none';
+                    botonCaptura.textContent = 'Activar Camara';
+                }
+
+                camaraActivada = !camaraActivada;
+            } catch (error) {
+                console.error('Error al acceder a la camara:', error);
+            }
+        }
+
+        // Funcion para tomar la captura
+        async function tomarCaptura() {
+            try {
+                const video = document.getElementById('camara');
+                const capturaCanvas = document.createElement('canvas');
+                const context = capturaCanvas.getContext('2d');
+
+                capturaCanvas.width = video.videoWidth;
+                capturaCanvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, capturaCanvas.width, capturaCanvas.height);
+                const capturaBase64 = capturaCanvas.toDataURL('image/jpeg');
+
+                document.getElementById('captura').value = capturaBase64;
+            } catch (error) {
+                console.error('Error al tomar la captura:', error);
+            }
+        }
+    </script>
+
+</body>
+</html>
