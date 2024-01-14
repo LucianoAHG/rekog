@@ -3,29 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style_index.css">
+    <link rel="stylesheet" href="/static/style_index.css">
     <title>Mi Aplicación</title>
 </head>
 <body>
 
+    <div class="container" id="login-container">
+        <!-- Agregamos un contenedor para la animación -->
+        <!-- Formulario para Iniciar Sesión -->
+        <form action="#" method="post" id="login-form">
+            <div class="usuario">
+                <label for="username">Usuario o Correo Electronico:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <br>
+            <div class="Contra">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <br>
+            <button type="submit">Iniciar Sesión</button>
+        </form>
+        <p>¿No tienes una cuenta? <a href="{{ url_for('crear_usuario') }}">Crear usuario</a></p>
+    </div>
 
-    <!-- Formulario para Iniciar Sesión -->
-    <form action="#" method="post">
-        <div class="usuario">
-            <label for="username">Usuario o Correo Electronico:</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-        <br>
-        <div class="Contra">
-        <label for="password">Contraseña:</label>
-        <input type="password" id="password" name="password" required>
-        </div>
-        <br>
-        <button type="submit">Iniciar Sesión</button>
-    </form>
-    <p>¿No tienes una cuenta? <a href="{{ url_for('crear_usuario') }}">Crear usuario</a></p>
-
-
+    <script src="/static/Script.js"></script> <!-- Agregamos el script de JavaScript -->
 
 </body>
 </html>

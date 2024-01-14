@@ -2,50 +2,53 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Formulario de Carga</title>
+    <link rel="stylesheet" href="/static/style_fom_carga.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8sh+WyL8E+e7eR5IC5Rg/JOWJXWwW+wnW4g8zo" crossorigin="anonymous">
 </head>
-<body class="bg-light">
+<body>
 
     <div class="container mt-5 mt-5-custom">
-        <h2 class="mb-4 text-center">Formulario de Carga</h2>
+        <div class="recuadro">
+            <h2 class="mb-4 text-center">Cargar Cédula de Identidad</h2>
+            <form action="{{ url_for('formulario_carga') }}" method="post">
+                <div class="form-group">
+                    <label for="cedula">Cedula de Identidad:</label>
+                    <input type="file" accept="image/*" capture="camera" class="form-control" id="cedula" name="cedula" required>
+                    <!-- Vista previa de la cédula -->
+                    <img id="vistaPreviaCedula" alt="Vista Previa" style="display: none; max-width: 100%; margin-top: 10px;">
+                </div>
+            </form>
+        </div>
 
-        <!-- Agrega un elemento de video para mostrar la captura de la camara -->
-        <video id="camara" width="35%" height="auto" style="display: none;" playsinline autoplay muted></video>
-
-
-        <form action="{{ url_for('formulario_carga') }}" method="post">
-            <!-- Agrega un campo oculto para enviar la captura de la camara como datos de formulario -->
-            <input type="hidden" id="captura" name="captura" required>
-
-            <div class="form-group">
-                <label for="cedula">Cedula de Identidad:</label>
-                <input type="file" accept="image/*" capture="camera" class="form-control" id="cedula" name="cedula" required>
-            </div>
-
-            <button type="button" onclick="activarDesactivarCamara()" class="btn btn-primary btn-block">Tomar Captura</button>
-            <button type="submit" class="btn btn-success btn-block">Enviar Formulario</button>
-        </form>
+        <div class="recuadro">
+            <h2 class="mb-4 text-center">Captura desde la Cámara</h2>
+            <video id="camara" width="100%" height="auto" playsinline autoplay muted style="display: none;"></video>
+            <form action="{{ url_for('formulario_carga') }}" method="post">
+                <input type="hidden" id="captura" name="captura" required>
+                <button type="button" onclick="activarDesactivarCamara()" class="btn btn-primary btn-captura btn-block">Tomar Captura</button>
+                <!-- Vista previa de la captura -->
+                <img id="vistaPreviaCaptura" alt="Vista Previa" style="display: none; max-width: 100%; margin-top: 10px;">
+                <button type="submit" class="btn btn-success btn-block">Enviar Formulario</button>
+            </form>
+        </div>
     </div>
 
-    <!-- Agrega el script JavaScript para la captura de la camara -->
     <script>
         let camaraActivada = false;
 
-        // Funcion para activar/desactivar la camara
         async function activarDesactivarCamara() {
             const video = document.getElementById('camara');
-            const botonCaptura = document.querySelector('.btn-primary');
+            const botonCaptura = document.querySelector('.btn-captura');
 
             try {
                 if (!camaraActivada) {
-                    // Activar la camara
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     video.srcObject = stream;
                     video.style.display = 'block';
                     botonCaptura.textContent = 'Tomar Captura';
                 } else {
-                    // Desactivar la camara
                     const stream = video.srcObject;
                     const tracks = stream.getTracks();
 
@@ -61,23 +64,39 @@
             }
         }
 
-        // Funcion para tomar la captura
-        async function tomarCaptura() {
-            try {
-                const video = document.getElementById('camara');
-                const capturaCanvas = document.createElement('canvas');
-                const context = capturaCanvas.getContext('2d');
+        // Función para previsualizar la cédula antes de enviar el formulario
+        document.getElementById('cedula').addEventListener('change', function (event) {
+            const inputCedula = event.target;
+            const vistaPreviaCedula = document.getElementById('vistaPreviaCedula');
 
-                capturaCanvas.width = video.videoWidth;
-                capturaCanvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0, capturaCanvas.width, capturaCanvas.height);
-                const capturaBase64 = capturaCanvas.toDataURL('image/jpeg');
+            if (inputCedula.files && inputCedula.files[0]) {
+                const lector = new FileReader();
 
-                document.getElementById('captura').value = capturaBase64;
-            } catch (error) {
-                console.error('Error al tomar la captura:', error);
+                lector.onload = function (e) {
+                    vistaPreviaCedula.src = e.target.result;
+                    vistaPreviaCedula.style.display = 'block';
+                };
+
+                lector.readAsDataURL(inputCedula.files[0]);
             }
-        }
+        });
+
+        // Función para previsualizar la captura antes de enviar el formulario
+        document.getElementById('captura').addEventListener('change', function (event) {
+            const inputCaptura = event.target;
+            const vistaPreviaCaptura = document.getElementById('vistaPreviaCaptura');
+
+            if (inputCaptura.files && inputCaptura.files[0]) {
+                const lector = new FileReader();
+
+                lector.onload = function (e) {
+                    vistaPreviaCaptura.src = e.target.result;
+                    vistaPreviaCaptura.style.display = 'block';
+                };
+
+                lector.readAsDataURL(inputCaptura.files[0]);
+            }
+        });
     </script>
 
 </body>

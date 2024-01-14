@@ -1,0 +1,31 @@
+body {
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    margin-top: 50px;
+    display: flex;
+    justify-content: space-between;
+    width: 60%;
+}
+
+.recuadro {
+    border: 1px solid #ced4da;
+    padding: 20px;
+    border-radius: 8px;
+    width: 45%; /* Ajustar el ancho del recuadro */
+}
+
+#camara {
+    width: 100%;
+    height: auto;
+    display: none;
+}
+
+.btn-captura {
+    margin-top: 10px;
+}
