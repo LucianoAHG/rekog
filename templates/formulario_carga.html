@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style_fom_carga.css">
     <title>Formulario de Carga</title>
-
 </head>
 <body class="bg-light">
     <div class="titulo-container">
@@ -30,6 +29,8 @@
             <div class="imagen-container" id="captura-imagen">
                 <!-- Aquí se mostrará la cámara y la imagen capturada -->
                 <video id="camara" width="100%" height="auto" style="display: none;" playsinline autoplay muted></video>
+                <img id="captura-preview" style="display: none;" alt="Captura">
+                <canvas id="canvas" style="display: none;"></canvas>
             </div>
         </div>
     </div>
@@ -50,17 +51,20 @@
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
     <script>
         let camaraActivada = false;
+        let video = document.getElementById('camara');
+        let canvas = document.getElementById('canvas');
+        let capturaPreview = document.getElementById('captura-preview');
+        let botonCaptura = document.getElementById('btnCaptura');
 
         async function activarDesactivarCamara() {
-            const video = document.getElementById('camara');
-            const botonCaptura = document.getElementById('btnCaptura');
-
             try {
                 if (!camaraActivada) {
                     // Activar la cámara
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                     handleSuccess(stream);
                     video.style.display = 'block';
+                    capturaPreview.style.display = 'none';
+                    canvas.style.display = 'none';
                     botonCaptura.textContent = 'Tomar Captura';
                 } else {
                     // Desactivar la cámara
@@ -70,6 +74,11 @@
                     tracks.forEach(track => track.stop());
                     video.srcObject = null;
                     video.style.display = 'none';
+                    if (capturaPreview.src) {
+                        capturaPreview.style.display = 'block';
+                    } else {
+                        canvas.style.display = 'block';
+                    }
                     botonCaptura.textContent = 'Activar Cámara';
                 }
 
@@ -82,6 +91,36 @@
         function handleSuccess(stream) {
             window.stream = stream;
             video.srcObject = stream;
+        }
+
+        botonCaptura.addEventListener('click', () => {
+            tomarCaptura();
+        });
+
+        function tomarCaptura() {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Mostrar la captura en el contenedor correspondiente
+            capturaPreview.src = canvas.toDataURL('image/jpeg');
+            capturaPreview.style.display = 'block';
+
+            // Opcional: Ocultar la cámara y el canvas
+            video.style.display = 'none';
+            canvas.style.display = 'none';
+
+            // Restaurar el botón a su estado original
+            botonCaptura.textContent = 'Activar Cámara';
+            camaraActivada = false;
+
+            // Crear un enlace para descargar la imagen
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/jpeg');
+            link.download = 'captura_temporal.jpg';
+            document.body.appendChild(link);
+            link.click();
         }
     </script>
 </body>
