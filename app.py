@@ -10,8 +10,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # Configuraciones para AWS S3
-AWS_ACCESS_KEY_ID = 'AKIA4MTWJ2F2QHHBV75F'
-AWS_SECRET_ACCESS_KEY = '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'
+# agregar las secret key
 AWS_BUCKET_NAME = 'pruebasimg123'
 AWS_REGION = 'us-east-1'
 
