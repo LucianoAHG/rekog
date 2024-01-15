@@ -3,101 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulario de Carga</title>
     <link rel="stylesheet" href="/static/style_fom_carga.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8sh+WyL8E+e7eR5IC5Rg/JOWJXWwW+wnW4g8zo" crossorigin="anonymous">
-</head>
-<body>
+    <title>Formulario de Carga</title>
 
-    <div class="container mt-5 mt-5-custom">
-        <div class="recuadro">
-            <h2 class="mb-4 text-center">Cargar Cédula de Identidad</h2>
-            <form action="{{ url_for('formulario_carga') }}" method="post">
-                <div class="form-group">
-                    <label for="cedula">Cedula de Identidad:</label>
-                    <input type="file" accept="image/*" capture="camera" class="form-control" id="cedula" name="cedula" required>
-                    <!-- Vista previa de la cédula -->
-                    <img id="vistaPreviaCedula" alt="Vista Previa" style="display: none; max-width: 100%; margin-top: 10px;">
-                </div>
-            </form>
+</head>
+<body class="bg-light">
+    <div class="titulo-container">
+        <h2 class="titulo-verificacion">Verificar Información del Usuario</h2>
+    </div>
+
+    <div class="recuadro-container">
+        <!-- Recuadro Izquierdo -->
+        <div class="recuadro recuadro-izquierdo">
+            <h3 class="titulo-recuadro">¿Me muestras tu cédula de identidad?</h3>
+            <div class="imagen-container" id="cedula-imagen">
+                <!-- Imagen de ejemplo de cédula -->
+                <img src="/static/cedulaejemplo.png" alt="Ejemplo Cédula" class="ejemplo-imagen">
+            </div>
+            <input type="file" accept="image/*" capture="camera" class="form-control" id="cedula" name="cedula" required>
         </div>
 
-        <div class="recuadro">
-            <h2 class="mb-4 text-center">Captura desde la Cámara</h2>
-            <video id="camara" width="100%" height="auto" playsinline autoplay muted style="display: none;"></video>
-            <form action="{{ url_for('formulario_carga') }}" method="post">
-                <input type="hidden" id="captura" name="captura" required>
-                <button type="button" onclick="activarDesactivarCamara()" class="btn btn-primary btn-captura btn-block">Tomar Captura</button>
-                <!-- Vista previa de la captura -->
-                <img id="vistaPreviaCaptura" alt="Vista Previa" style="display: none; max-width: 100%; margin-top: 10px;">
-                <button type="submit" class="btn btn-success btn-block">Enviar Formulario</button>
-            </form>
+        <!-- Recuadro Derecho -->
+        <div class="recuadro recuadro-derecho">
+            <h3 class="titulo-recuadro">¿Me dejas tomar una selfie?</h3>
+            <button type="button" onclick="activarDesactivarCamara()" class="btn-captura" id="btnCaptura">Activar Cámara</button>
+            <div class="imagen-container" id="captura-imagen">
+                <!-- Aquí se mostrará la cámara y la imagen capturada -->
+                <video id="camara" width="100%" height="auto" style="display: none;" playsinline autoplay muted></video>
+            </div>
         </div>
     </div>
 
+    <!-- Contenedor del botón y recuadros -->
+    <div class="btn-container">
+        <form action="/formulario_carga" method="post" enctype="multipart/form-data">
+            <button type="submit" class="btn btn-success">Enviar Formulario</button>
+        </form>
+    </div>
+
+    <div class="informacion-adicional">
+        <p class="texto-izquierda">¡Tranquilo! Tus datos no serán almacenados, solo se usarán para validar tu identidad :)</p>
+        <img src="/static/rekognition.png" alt="Amazon rekognition" class="logo-derecha">
+    </div>
+
+    <!-- Agrega el script JavaScript para la captura de la cámara -->
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
     <script>
         let camaraActivada = false;
 
         async function activarDesactivarCamara() {
             const video = document.getElementById('camara');
-            const botonCaptura = document.querySelector('.btn-captura');
+            const botonCaptura = document.getElementById('btnCaptura');
 
             try {
                 if (!camaraActivada) {
+                    // Activar la cámara
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    video.srcObject = stream;
+                    handleSuccess(stream);
                     video.style.display = 'block';
                     botonCaptura.textContent = 'Tomar Captura';
                 } else {
+                    // Desactivar la cámara
                     const stream = video.srcObject;
                     const tracks = stream.getTracks();
 
                     tracks.forEach(track => track.stop());
                     video.srcObject = null;
                     video.style.display = 'none';
-                    botonCaptura.textContent = 'Activar Camara';
+                    botonCaptura.textContent = 'Activar Cámara';
                 }
 
                 camaraActivada = !camaraActivada;
             } catch (error) {
-                console.error('Error al acceder a la camara:', error);
+                console.error('Error al acceder a la cámara:', error);
             }
         }
 
-        // Función para previsualizar la cédula antes de enviar el formulario
-        document.getElementById('cedula').addEventListener('change', function (event) {
-            const inputCedula = event.target;
-            const vistaPreviaCedula = document.getElementById('vistaPreviaCedula');
-
-            if (inputCedula.files && inputCedula.files[0]) {
-                const lector = new FileReader();
-
-                lector.onload = function (e) {
-                    vistaPreviaCedula.src = e.target.result;
-                    vistaPreviaCedula.style.display = 'block';
-                };
-
-                lector.readAsDataURL(inputCedula.files[0]);
-            }
-        });
-
-        // Función para previsualizar la captura antes de enviar el formulario
-        document.getElementById('captura').addEventListener('change', function (event) {
-            const inputCaptura = event.target;
-            const vistaPreviaCaptura = document.getElementById('vistaPreviaCaptura');
-
-            if (inputCaptura.files && inputCaptura.files[0]) {
-                const lector = new FileReader();
-
-                lector.onload = function (e) {
-                    vistaPreviaCaptura.src = e.target.result;
-                    vistaPreviaCaptura.style.display = 'block';
-                };
-
-                lector.readAsDataURL(inputCaptura.files[0]);
-            }
-        });
+        function handleSuccess(stream) {
+            window.stream = stream;
+            video.srcObject = stream;
+        }
     </script>
-
 </body>
 </html>

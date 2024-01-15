@@ -38,7 +38,7 @@ class RekognitionFace:
 # Configurar el cliente de Rekognition
 rekognition_client = boto3.client('rekognition')
 
-# Crear instancias de las imágenes que deseas comparar
+# Crear instancias de las imagenes que deseas comparar
 image_source = RekognitionImage(image_name='pasotest.jpg', rekognition_client=rekognition_client)
 
 # Especificar el nombre de la imagen de destino en el mismo bucket
