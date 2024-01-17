@@ -21,13 +21,13 @@ def upload_to_s3(local_file, bucket_name, s3_file):
         print("Credenciales de AWS no disponibles")
         return False
 
-# Parámetros
-local_file_path = "C:/Users/desar/Downloads/test123.jpg" # Ruta local donde se encuentra el archivo
+# Parametros
+local_file_path = "C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/cedula.jpg" # Ruta local donde se encuentra el archivo
 bucket_name = "pruebasimg123" # Nombre del bucket en s3
-s3_file_key = "pasotest.jpg" # Nombre con el que se va almacenar el archivo en s3
+s3_file_key = "cedula.jpg" # Nombre con el que se va almacenar el archivo en s3
 upload_to_s3(local_file_path, bucket_name, s3_file_key) # Metodo para Subir el archivo
 
-local_file_path = "C:/Users/desar/Downloads/personatest.jpg" # Ruta local donde se encuentra el archivo
+local_file_path = "C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/captura_cara.jpg" # Ruta local donde se encuentra el archivo
 bucket_name = "pruebasimg123" # Nombre del bucket en s3
-s3_file_key = "comparacion.jpg" # Nombre con el que se va almacenar el archivo en s3
+s3_file_key = "captura_cara.jpg" # Nombre con el que se va almacenar el archivo en s3
 upload_to_s3(local_file_path, bucket_name, s3_file_key) # Metodo para Subir el archivo

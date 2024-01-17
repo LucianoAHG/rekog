@@ -39,10 +39,10 @@ class RekognitionFace:
 rekognition_client = boto3.client('rekognition')
 
 # Crear instancias de las imagenes que deseas comparar
-image_source = RekognitionImage(image_name='pasotest.jpg', rekognition_client=rekognition_client)
+image_source = RekognitionImage(image_name='cedula.jpg', rekognition_client=rekognition_client)
 
 # Especificar el nombre de la imagen de destino en el mismo bucket
-target_image_name = 'comparacion.jpg'
+target_image_name = 'captura_cara.jpg'
 
 # Comparar caras
 matches, unmatches = image_source.compare_faces(target_image_name=target_image_name, similarity=80.0)

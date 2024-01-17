@@ -9,12 +9,13 @@ function CrearUsuario() {
     const [nuevaPassword, setNuevaPassword] = useState('');
     const [confirmarContrasena, setConfirmarContrasena] = useState('');
     const [error, setError] = useState('');
+    const [registroExitoso, setRegistroExitoso] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
-            const response = await axios.post('http://localhost:5000/crear_usuario', {
+            const response = await axios.post('http://127.0.0.1:5000/crear_usuario', {
                 nombre: nombre,
                 apellido: apellido,
                 email: email,
@@ -23,9 +24,30 @@ function CrearUsuario() {
                 confirmar_contrasena: confirmarContrasena,
             });
 
-            console.log(response.data); // Maneja la respuesta según tus necesidades
+            if (response.data.success) {
+                // Limpiar campos después de un registro exitoso
+                setNombre('');
+                setApellido('');
+                setEmail('');
+                setTelefono('');
+                setNuevaPassword('');
+                setConfirmarContrasena('');
+
+                // Establecer el estado de éxito y mostrar el mensaje
+                setRegistroExitoso(true);
+
+                // Resetear el estado de éxito después de un tiempo (opcional)
+                setTimeout(() => {
+                    setRegistroExitoso(false);
+                }, 5000); // Ocultar el mensaje después de 5 segundos (ajusta según tus necesidades)
+
+            } else {
+                // Manejar errores del servidor
+                setError(response.data.error || 'Error al crear usuario');
+            }
 
         } catch (error) {
+            // Manejar errores de la solicitud
             console.error('Error al crear usuario:', error.response.data);
             setError(error.response.data.error || 'Error al crear usuario');
         }
@@ -35,6 +57,9 @@ function CrearUsuario() {
         <div className="bg-gray-200 flex justify-center items-center h-screen w-screen">
             <div className="border-t-8 rounded-sm border-indigo-600 bg-white p-12 shadow-2xl w-96">
                 <h1 className="font-bold text-center block text-2xl">Crear Nuevo Usuario</h1>
+                {registroExitoso && (
+                    <p className="text-green-500 text-center mb-4">Registro exitoso. ¡Bienvenido!</p>
+                )}
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
                         <label htmlFor="nombre" className="block text-gray-700 text-sm font-bold mb-2">

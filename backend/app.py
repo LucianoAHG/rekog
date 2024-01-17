@@ -21,7 +21,7 @@ app.config['UPLOAD_FOLDER'] = DOCUMENTS_FOLDER
 
 # Crear la carpeta si no existe
 if not os.path.exists(DOCUMENTS_FOLDER):
-    os.makedirs(DOCUMENTOS_FOLDER)
+    os.makedirs(DOCUMENTS_FOLDER)
 
 # Modelo de Usuario para la base de datos
 class Usuario(db.Model):
@@ -31,6 +31,7 @@ class Usuario(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     telefono = db.Column(db.String(20), nullable=False)
     contrasena = db.Column(db.String(60), nullable=False)
+    confirmar_contrasena = db.Column(db.String(60), nullable=False)
 
 # Ruta para servir archivos estaticos de React
 @app.route('/static/<path:path>')

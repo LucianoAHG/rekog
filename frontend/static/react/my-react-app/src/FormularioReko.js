@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import Camara from './Camara';
+import './formrek.css';
 
 const FormularioReko = () => {
     const [cedula, setCedula] = useState(null);
     const [capturaCara, setCapturaCara] = useState(null);
+    const [activarCamara, setActivarCamara] = useState(false);
 
     const handleCedulaChange = (e) => {
         setCedula(e.target.files[0]);
@@ -13,21 +15,29 @@ const FormularioReko = () => {
         setCapturaCara(capturaBase64);
     };
 
+    const toggleActivarCamara = () => {
+        setActivarCamara(!activarCamara);
+    };
+
     const handleSubmit = async () => {
         try {
-            const formData = new FormData();
-            formData.append('cedula', cedula);
-            formData.append('captura_cara', dataURItoBlob(capturaCara));
+            if (capturaCara) {
+                const formData = new FormData();
+                formData.append('cedula', cedula);
+                formData.append('captura_cara', dataURItoBlob(capturaCara));
 
-            const response = await fetch('http://127.0.0.1:5000/upload_documentos', {
-                method: 'POST',
-                body: formData,
-            });
+                const response = await fetch('http://127.0.0.1:5000/upload_documentos', {
+                    method: 'POST',
+                    body: formData,
+                });
 
-            if (response.ok) {
-                console.log('Documentos subidos exitosamente');
+                if (response.ok) {
+                    console.log('Documentos subidos exitosamente');
+                } else {
+                    console.error('Error al subir documentos');
+                }
             } else {
-                console.error('Error al subir documentos');
+                console.error('Por favor, tome una captura de la cara.');
             }
         } catch (error) {
             console.error('Error:', error);
@@ -45,17 +55,20 @@ const FormularioReko = () => {
     };
 
     return (
-        <div>
+        <div className="container">
             <h2>Formulario de Reconocimiento</h2>
-            <div>
-                <label htmlFor="cedula">Subir cédula:</label>
-                <input type="file" accept="image/*" capture="camera" id="cedula" name="cedula" onChange={handleCedulaChange} />
+            <div className="form-section">
+                <div className="label-container">
+                    <label htmlFor="cedula">Subir cédula:</label>
+                    <input type="file" accept="image/*" capture="camera" id="cedula" name="cedula" onChange={handleCedulaChange} />
+                </div>
+                <div className="label-container">
+                    <label>Captura de cara:</label>
+                    <Camara onCapturaTomada={handleCapturaTomada} activarCamara={activarCamara} />
+                </div>
             </div>
-            <div>
-                <label>Captura de cara:</label>
-                <Camara onCapturaTomada={handleCapturaTomada} />
-            </div>
-            <button onClick={handleSubmit}>{capturaCara ? 'Enviar Documentos' : 'Tomar Captura'}</button>
+            <button onClick={toggleActivarCamara}>{activarCamara ? 'Desactivar Cámara' : 'Activar Cámara'}</button>
+            {activarCamara && <button onClick={handleSubmit}>Enviar Documentos</button>}
         </div>
     );
 };

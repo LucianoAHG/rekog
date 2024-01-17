@@ -4,7 +4,7 @@ import io
 rekognition = boto3.client('rekognition')
 
 bucket_name = 'pruebasimg123'
-image_name_s3 = 'pasotest.jpg'
+image_name_s3 = 'cedula.jpg'
 s3_object_source = {'Bucket': bucket_name, 'Name': image_name_s3}
 
 # Detectar etiquetas en la imagen de origen
@@ -19,8 +19,8 @@ if 'FaceDetails' in response_source and len(response_source['FaceDetails']) > 0:
     source_face_id = response_source['FaceDetails'][0]['FaceId']
     print(f"cara de la imagen de origen en S3: {source_face_id}")
 
-    # Especificar la ubicación de la segunda imagen en S3
-    image_name_s3_target = 'comparacion.jpg'
+    # Especificar la ubicacion de la segunda imagen en S3
+    image_name_s3_target = 'captura_cara.jpg'
     s3_object_target = {'Bucket': bucket_name, 'Name': image_name_s3_target}
 
     # Enviar la solicitud para comparar las caras
@@ -29,7 +29,7 @@ if 'FaceDetails' in response_source and len(response_source['FaceDetails']) > 0:
         TargetImage={'S3Object': s3_object_target}
     )
 
-    # Verificar los resultados de la comparación
+    # Verificar los resultados de la comparacion
     if compare_response['FaceMatches']:
         confidence = compare_response['FaceMatches'][0]['Similarity']
         print(f'Cara similar encontrada en la segunda imagen: {confidence}%')
