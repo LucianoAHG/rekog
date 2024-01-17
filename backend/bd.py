@@ -14,7 +14,7 @@ class Usuario(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     telefono = db.Column(db.String(15), nullable=False)
     contrasena = db.Column(db.String(60), nullable=False)
-    confirmar_contrasena = db.Column(db.String(60), nullable=False)
+    
 
 if __name__ == '__main__':
     db.create_all()

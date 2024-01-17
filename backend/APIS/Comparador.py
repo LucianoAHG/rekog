@@ -20,7 +20,7 @@ class RekognitionImage:
             ]
             unmatches = [RekognitionFace(face) for face in response["UnmatchedFaces"]]
             print(
-                f"Se encontro {len(matches)} cara similar y {len(unmatches)} no identificada."
+                f"Se encontro {len(matches)}coincidencias | {len(unmatches)} coincidencias encontradas"
             )
         except ClientError:
             print(

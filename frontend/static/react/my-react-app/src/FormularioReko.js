@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import Camara from './Camara';
+import UsuarioValidado from './UsuarioValidado';
 import './formrek.css';
 
 const FormularioReko = () => {
     const [cedula, setCedula] = useState(null);
     const [capturaCara, setCapturaCara] = useState(null);
     const [activarCamara, setActivarCamara] = useState(false);
+    const [resultadoValidacion, setResultadoValidacion] = useState(null);
 
     const handleCedulaChange = (e) => {
         setCedula(e.target.files[0]);
@@ -33,6 +35,10 @@ const FormularioReko = () => {
 
                 if (response.ok) {
                     console.log('Documentos subidos exitosamente');
+
+                    // Supongamos que el backend responde con un objeto resultadoValidacion
+                    const data = await response.json();
+                    setResultadoValidacion(data.resultadoValidacion);
                 } else {
                     console.error('Error al subir documentos');
                 }
@@ -69,6 +75,9 @@ const FormularioReko = () => {
             </div>
             <button onClick={toggleActivarCamara}>{activarCamara ? 'Desactivar Cámara' : 'Activar Cámara'}</button>
             {activarCamara && <button onClick={handleSubmit}>Enviar Documentos</button>}
+
+            {/* Renderizar UsuarioValidado si hay resultados de la validación */}
+            {resultadoValidacion && <UsuarioValidado resultadoValidacion={resultadoValidacion} />}
         </div>
     );
 };

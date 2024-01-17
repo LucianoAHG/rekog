@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function CrearUsuario() {
+    const navigate = useNavigate();
+
     const [nombre, setNombre] = useState('');
     const [apellido, setApellido] = useState('');
     const [email, setEmail] = useState('');
@@ -39,6 +42,8 @@ function CrearUsuario() {
                 // Resetear el estado de éxito después de un tiempo (opcional)
                 setTimeout(() => {
                     setRegistroExitoso(false);
+                    // Redirige al formulario después del registro exitoso
+                    navigate('/FormularioReko'); // Ajusta la ruta según tu aplicación
                 }, 5000); // Ocultar el mensaje después de 5 segundos (ajusta según tus necesidades)
 
             } else {
