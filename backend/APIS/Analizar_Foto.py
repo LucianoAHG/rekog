@@ -36,5 +36,5 @@ if 'FaceDetails' in response_source and len(response_source['FaceDetails']) > 0:
     else:
         print('No se encontraron caras similares en la segunda imagen.')
 
-# else:
-#     print("No se detectaron caras en la imagen de origen en S3.")
+else:
+    print("No se detectaron caras en la imagen de origen en S3.")

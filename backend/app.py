@@ -1,13 +1,14 @@
-from flask import Flask, render_template, send_from_directory, request, jsonify, session
+# app.py
+
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import check_password_hash
+from botocore.exceptions import NoCredentialsError
 import os
 from flask_cors import CORS
 import boto3
-import io
-
-# from Subir_Archivo import upload_to_s3
-# from Comparador import RekognitionImage
+import random
+from captura_frame import capture_random_frame  # Importa la funcion desde captura_frame.py
+from Subir_Archivo import upload_to_s3
 
 app = Flask(__name__)
 CORS(app)
@@ -17,7 +18,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///usuarios.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# Configuraciones para AWS S3 
+# Configuraciones para AWS S3
 AWS_BUCKET_NAME = 'pruebasimg123'
 AWS_REGION = 'us-east-1'
 
@@ -37,115 +38,75 @@ class Usuario(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     telefono = db.Column(db.String(20), nullable=False)
     contrasena = db.Column(db.String(60), nullable=False)
-    
-    
-# Ruta para servir archivos estaticos de React
-@app.route('/static/<path:path>')
-def serve_static(path):
-    return send_from_directory(os.path.join('frontend', 'build', 'static'), path)
 
-# Ruta para manejar todas las demas rutas en React
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def index(path):
-    return render_template('index.html')
+def compare_faces(rekognition, source_image_name, target_image_name, bucket_name):
+    s3_object_source = {'Bucket': bucket_name, 'Name': source_image_name}
+    s3_object_target = {'Bucket': bucket_name, 'Name': target_image_name}
 
-@app.route('/crear_usuario', methods=['POST'])
-def crear_usuario():
-    if request.method == 'POST':
-        nombre = request.json.get('nombre')
-        apellido = request.json.get('apellido')
-        email = request.json.get('email')
-        telefono = request.json.get('telefono')
-        contrasena = request.json.get('nueva_password')
-        confirmar_contrasena = request.json.get('confirmar_contrasena')
+    # Enviar la solicitud para comparar las caras
+    compare_response = rekognition.compare_faces(
+        SourceImage={'S3Object': s3_object_source},
+        TargetImage={'S3Object': s3_object_target}
+    )
 
-        if not nombre or not apellido or not email or not telefono or not contrasena or not confirmar_contrasena:
-            return jsonify({'error': 'Todos los campos son requeridos'}), 400
+    # Verificar los resultados de la comparacion
+    if compare_response.get('FaceMatches'):
+        confidence = compare_response['FaceMatches'][0]['Similarity']
+        print(f'Cara similar encontrada en la segunda imagen ({target_image_name}): {confidence}%')
+        return confidence
+    else:
+        print(f'No se encontraron caras similares en la segunda imagen ({target_image_name}).')
+        return 0
 
-        if contrasena != confirmar_contrasena:
-            return jsonify({'error': 'Las contrasenas no coinciden'}), 400
-
-        if Usuario.query.filter_by(email=email).first():
-            return jsonify({'error': 'El usuario ya existe'}), 400
-
-        nuevo_usuario = Usuario(nombre=nombre, apellido=apellido, email=email, telefono=telefono, contrasena=contrasena)
-
-        db.session.add(nuevo_usuario)
-        db.session.commit()
-
-        return jsonify({'success': True}), 200
-
-# Ruta para subir la cedula y la captura de cara
 @app.route('/upload_documentos', methods=['POST'])
 def upload_documentos():
-    from Subir_Archivo import upload_to_s3
-    from Comparador import RekognitionImage
+    try:
+        if not hasattr(upload_documentos, 'rekognition_client'):
+            upload_documentos.rekognition_client = boto3.client('rekognition')
 
-    if not hasattr(upload_documentos, 'rekognition_client'):
-        # Configurar el cliente de Rekognition si no esta configurado
-        upload_documentos.rekognition_client = boto3.client('rekognition')
+        if request.method == 'POST':
+            cedula = request.files.get('cedula')
+            video_persona = request.files.get('video_persona')
 
-    if request.method == 'POST':
-        cedula = request.files['cedula']
-        captura_cara = request.files['captura_cara']
+            if not cedula or not video_persona:
+                return jsonify({'error': 'Ambos documentos son requeridos'}), 400
 
-        if not cedula or not captura_cara:
-            return jsonify({'error': 'Ambos documentos son requeridos'}), 400
+            cedula_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'cedula.jpg')
+            cedula.save(cedula_filename)
 
-        # Guardar cedula en la carpeta Documentos con formato jpg
-        cedula_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'cedula.jpg')
-        cedula.save(cedula_filename)
+            video_persona_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'video_persona.mp4')
+            video_persona.save(video_persona_filename)
 
-        # Guardar captura de cara en la carpeta Documentos con formato jpg
-        captura_cara_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'captura_cara.jpg')
-        captura_cara.save(captura_cara_filename)
+            captura_cara_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'captura_cara.jpg')
+            
+            # Llama a la funcion de captura desde captura_frame.py
+            capture_random_frame(video_persona_filename, captura_cara_filename)
 
-        # Subir archivos a S3 despues de la validacion exitosa
-        upload_to_s3(cedula_filename, AWS_BUCKET_NAME, 'cedula.jpg')
-        upload_to_s3(captura_cara_filename, AWS_BUCKET_NAME, 'captura_cara.jpg')
+            # Subir archivos a S3 despues de la validacion exitosa
+            upload_to_s3(cedula_filename, AWS_BUCKET_NAME, 'cedula.jpg')
+            upload_to_s3(captura_cara_filename, AWS_BUCKET_NAME, 'captura_cara.jpg')
 
-        # Crear instancia de RekognitionImage
-        image_source = RekognitionImage(image_name='cedula.jpg', rekognition_client=upload_documentos.rekognition_client)
+            rekognition = boto3.client('rekognition')
+            similarity_percentage = compare_faces(
+                rekognition, 'cedula.jpg', 'captura_cara.jpg', AWS_BUCKET_NAME
+            )
 
-        # Especificar el nombre de la imagen de destino en el mismo bucket
-        target_image_name = 'captura_cara.jpg'
+            if similarity_percentage >= 80.0:
+                match_message = f'Cara similar encontrada con {similarity_percentage}% de similitud.'
+                return jsonify({'resultado_validacion': {'success': True, 'message': 'La comparacion fue exitosa', 'similarityPercentage': similarity_percentage, 'matchMessage': match_message}}), 200
+            elif similarity_percentage <= 10:
+                match_message = f'No se encontraron caras similares. Similitud: {similarity_percentage}%.'
+                return jsonify({'resultado_validacion': {'success': False, 'error': 'La comparacion ha fallado', 'similarityPercentage': similarity_percentage, 'matchMessage': match_message}}), 401
+            else:
+                match_message = 'No se encontraron caras similares.'
+                return jsonify({'resultado_validacion': {'success': False, 'error': 'La comparacion ha fallado', 'similarityPercentage': similarity_percentage, 'matchMessage': match_message}}), 401
+    except Exception as e:
+        return jsonify({'error': f'Error en la carga y validacion: {str(e)}'}), 500
 
-        # Comparar caras
-        matches, unmatches = image_source.compare_faces(target_image_name=target_image_name, similarity=80.0)
-
-        if matches:
-            # La comparacion fue exitosa
-            return jsonify({'success': True, 'message': 'La comparacion fue exitosa'}), 200
-        else:
-            # La comparacion fallo
-            return jsonify({'error': 'La comparacion ha fallado'}), 401    
-
-
-        
-@app.route('/login', methods=['POST'])
-def login():
-    if request.method == 'POST':
-        identifier = request.json.get('identifier')  # Puede ser correo electronico o nombre de usuario
-        contrasena = request.json.get('password')
-
-        if not identifier or not contrasena:
-            return jsonify({'error': 'Correo electronico o nombre de usuario y contrasena son requeridos'}), 400
-
-        # Buscar usuario por correo electronico o nombre de usuario
-        usuario = Usuario.query.filter(
-            (Usuario.email == identifier) | (Usuario.nombre == identifier)
-        ).first()
-
-        if not usuario or not check_password_hash(usuario.contrasena, contrasena):
-            return jsonify({'error': 'Credenciales incorrectas'}), 401
-
-        # Iniciar sesion
-        session['user_id'] = usuario.id
-
-        return jsonify({'success': True}), 200
+# ... (resto del codigo)
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    # Usar ssl_context para habilitar HTTPS
+    app.run('0.0.0.0', debug=True)
