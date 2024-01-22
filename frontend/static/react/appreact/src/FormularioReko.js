@@ -7,6 +7,8 @@ const FormularioReko = () => {
     const [capturaCara, setCapturaCara] = useState(null);
     const [activarCamara, setActivarCamara] = useState(false);
     const [resultadoValidacion, setResultadoValidacion] = useState(null);
+    const [etiquetasCedula, setEtiquetasCedula] = useState([]);
+    const [etiquetasCapturaCara, setEtiquetasCapturaCara] = useState([]);
 
     // Ref para almacenar el temporizador de grabación
     const grabacionRef = useRef(null);
@@ -20,10 +22,16 @@ const FormularioReko = () => {
         }
 
         setCedula(file);
+
+        // Limpiar las etiquetas cuando se selecciona una nueva cédula
+        setEtiquetasCedula([]);
     };
 
     const handleCapturaTomada = (capturaBase64) => {
         setCapturaCara(capturaBase64);
+
+        // Limpiar las etiquetas cuando se toma una nueva captura de cara
+        setEtiquetasCapturaCara([]);
     };
 
     const handleVideoGrabado = (videoBlob) => {
@@ -68,6 +76,12 @@ const FormularioReko = () => {
             // Manejar la respuesta del backend
             const data = await response.json();
             setResultadoValidacion(data.resultado_validacion);
+
+            // Almacenar etiquetas de la cédula y de la captura de cara en el estado
+            if (data.resultado_validacion.labelsData) {
+                setEtiquetasCedula(data.resultado_validacion.labelsData.labels_source);
+                setEtiquetasCapturaCara(data.resultado_validacion.labelsData.labels_target);
+            }
         } catch (error) {
             console.error('Error al enviar documentos al backend:', error);
         }
@@ -122,13 +136,40 @@ const FormularioReko = () => {
             <button onClick={iniciarCapturaVideo}>Iniciar Grabación de Video</button>
             <button onClick={handleSubmit}>Enviar Documentos</button>
 
+            {etiquetasCedula.length > 0 && (
+                <div>
+                    <h3>Etiquetas detectadas en la cédula:</h3>
+                    <ul>
+                        {etiquetasCedula.map((etiqueta, index) => (
+                            <li key={index}>{`${etiqueta.name}: ${etiqueta.confidence.toFixed(2)}%`}</li>
+                        ))}
+                        <li>Cedula de identidad Validada</li>
+                    </ul>
+                </div>
+            )}
+
+            {etiquetasCapturaCara.length > 0 && (
+                <div>
+                    <h3>Etiquetas detectadas en la captura de cara:</h3>
+                    <ul>
+                        {etiquetasCapturaCara.map((etiqueta, index) => (
+                            <li key={index}>{`${etiqueta.name}: ${etiqueta.confidence.toFixed(2)}%`}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
             {resultadoValidacion && (
                 <div>
                     <h3>Resultado de Validación</h3>
-                    <p>Éxito: {resultadoValidacion.success ? 'Sí' : 'No'}</p>
+                    <p>Exito: {resultadoValidacion.success ? 'Si' : 'No, debe intentar nuevamente.'}</p>
                     <p>Mensaje: {resultadoValidacion.message}</p>
-                    <p>Porcentaje de similitud: {resultadoValidacion.similarityPercentage}%</p>
-                    <p>{resultadoValidacion.matchMessage}</p>
+                    {resultadoValidacion.success && (
+                        <>
+                            <p>Porcentaje de similitud: {resultadoValidacion.similarityPercentage}%</p>
+                            {resultadoValidacion.matchMessage && <p>{resultadoValidacion.matchMessage}</p>}
+                        </>
+                    )}
                 </div>
             )}
         </div>

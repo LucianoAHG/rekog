@@ -1,24 +1,48 @@
 import cv2
 import random
 
-def capture_random_frame(video_path, output_path):
-    cap = cv2.VideoCapture(video_path)
+def capture_random_frame_by_fps(video_path, output_path):
+    try:
+        # Abre el video utilizando OpenCV
+        cap = cv2.VideoCapture(video_path)
 
-    # Obtiene el numero total de frames en el video
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        # Verifica si la apertura del video fue exitosa
+        if not cap.isOpened():
+            raise Exception("Error al abrir el video")
 
-    # Selecciona un frame aleatorio
-    random_frame_index = random.randint(0, total_frames - 1)
+        # Obtiene la duracion total del video en segundos
+        total_duration = cap.get(cv2.CAP_PROP_POS_MSEC) / 1000.0
 
-    # Establece el indice del frame
-    cap.set(cv2.CAP_PROP_POS_FRAMES, random_frame_index)
+        # Obtiene el numero de frames por segundo (FPS)
+        fps = cap.get(cv2.CAP_PROP_FPS)
 
-    # Lee el frame seleccionado
-    ret, frame = cap.read()
+        # Verifica si hay FPS validos
+        if fps <= 0:
+            raise Exception("El video no tiene FPS validos")
 
-    # Guarda el frame como imagen
-    if ret:
+        # Calcula el tiempo aleatorio en segundos
+        random_time = random.uniform(0, total_duration)
+
+        # Establece la posicion en el tiempo
+        cap.set(cv2.CAP_PROP_POS_MSEC, random_time * 1000)
+
+        # Lee el frame seleccionado
+        ret, frame = cap.read()
+
+        # Verifica si la lectura del frame fue exitosa
+        if not ret:
+            raise Exception("Error al leer el frame")
+
+        # Guarda el frame como imagen
         cv2.imwrite(output_path, frame)
 
-    # Libera el objeto de captura
-    cap.release()
+        # Libera el objeto de captura
+        cap.release()
+
+    except Exception as e:
+        print(f"Error al capturar el frame aleatorio: {str(e)}")
+
+# Uso de la funcion con las rutas absolutas
+video_persona_filename = 'C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/video_persona.mp4'
+captura_cara_filename = 'C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/captura_cara.jpg'
+capture_random_frame_by_fps(video_persona_filename, captura_cara_filename)

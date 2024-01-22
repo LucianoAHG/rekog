@@ -1,13 +1,9 @@
-# app.py
-
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from botocore.exceptions import NoCredentialsError
 import os
 from flask_cors import CORS
 import boto3
-import random
-from captura_frame import capture_random_frame  # Importa la funcion desde captura_frame.py
+from captura_frame import capture_random_frame_by_fps
 from Subir_Archivo import upload_to_s3
 
 app = Flask(__name__)
@@ -58,6 +54,17 @@ def compare_faces(rekognition, source_image_name, target_image_name, bucket_name
         print(f'No se encontraron caras similares en la segunda imagen ({target_image_name}).')
         return 0
 
+def detect_labels(rekognition, bucket_name, image_name):
+    s3_object = {'Bucket': bucket_name, 'Name': image_name}
+    response = rekognition.detect_labels(Image={'S3Object': s3_object})
+    labels = [{'name': label['Name'], 'confidence': label['Confidence']} for label in response['Labels']]
+    return labels
+
+def has_prohibited_labels(labels):
+    # Validacion para las etiquetas prohibidas
+    prohibited_labels = ['Photography', 'Portrait', 'Selfie']
+    return any(label['name'] in prohibited_labels for label in labels)
+
 @app.route('/upload_documentos', methods=['POST'])
 def upload_documentos():
     try:
@@ -78,32 +85,62 @@ def upload_documentos():
             video_persona.save(video_persona_filename)
 
             captura_cara_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'captura_cara.jpg')
-            
+
             # Llama a la funcion de captura desde captura_frame.py
-            capture_random_frame(video_persona_filename, captura_cara_filename)
+            capture_random_frame_by_fps(video_persona_filename, captura_cara_filename)
 
             # Subir archivos a S3 despues de la validacion exitosa
             upload_to_s3(cedula_filename, AWS_BUCKET_NAME, 'cedula.jpg')
             upload_to_s3(captura_cara_filename, AWS_BUCKET_NAME, 'captura_cara.jpg')
 
             rekognition = boto3.client('rekognition')
+
+            # Detectar etiquetas en la imagen de origen
+            labels_source = detect_labels(rekognition, AWS_BUCKET_NAME, 'cedula.jpg')
+
+            # Detectar etiquetas en la segunda imagen
+            labels_target = detect_labels(rekognition, AWS_BUCKET_NAME, 'captura_cara.jpg')
+
             similarity_percentage = compare_faces(
                 rekognition, 'cedula.jpg', 'captura_cara.jpg', AWS_BUCKET_NAME
             )
 
-            if similarity_percentage >= 80.0:
-                match_message = f'Cara similar encontrada con {similarity_percentage}% de similitud.'
-                return jsonify({'resultado_validacion': {'success': True, 'message': 'La comparacion fue exitosa', 'similarityPercentage': similarity_percentage, 'matchMessage': match_message}}), 200
+            response_data = {
+                'resultado_validacion': {
+                    'success': False,
+                    'error': 'La comparacion ha fallado',
+                    'similarityPercentage': similarity_percentage,
+                    'matchMessage': 'No se encontraron caras similares.',
+                    'labelsData': {
+                        'labels_source': labels_source,
+                        'labels_target': labels_target
+                    }
+                }
+            }
+
+            # Validacion de etiqueta "Id Cards" en la cedula
+            if similarity_percentage >= 90.0:
+                if any(label['name'] in ['Id Cards'] for label in labels_source):
+                    response_data['resultado_validacion']['success'] = True
+                    response_data['resultado_validacion']['error'] = None
+                    response_data['resultado_validacion']['matchMessage'] = f'Se valido correctamente su cedula de identidad con un {similarity_percentage}%.'
+                    response_data['resultado_validacion']['message'] = 'La comparacion fue exitosa'
+                    response_data['resultado_validacion']['labelsData']['labels_source'].append({'name': 'Cedula de identidad validada', 'confidence': similarity_percentage})
+                    return jsonify(response_data), 200
+
+            elif 80.0 <= similarity_percentage < 90.0:
+                response_data['resultado_validacion']['matchMessage'] = f'Se requiere revision. Similitud: {similarity_percentage}%.'
+                return jsonify(response_data), 403
+
             elif similarity_percentage <= 10:
-                match_message = f'No se encontraron caras similares. Similitud: {similarity_percentage}%.'
-                return jsonify({'resultado_validacion': {'success': False, 'error': 'La comparacion ha fallado', 'similarityPercentage': similarity_percentage, 'matchMessage': match_message}}), 401
+                response_data['resultado_validacion']['matchMessage'] = f'No se encontraron caras similares. Similitud: {similarity_percentage}%.'
+                return jsonify(response_data), 402
+
             else:
-                match_message = 'No se encontraron caras similares.'
-                return jsonify({'resultado_validacion': {'success': False, 'error': 'La comparacion ha fallado', 'similarityPercentage': similarity_percentage, 'matchMessage': match_message}}), 401
+                return jsonify(response_data), 401
+
     except Exception as e:
         return jsonify({'error': f'Error en la carga y validacion: {str(e)}'}), 500
-
-# ... (resto del codigo)
 
 if __name__ == '__main__':
     with app.app_context():
