@@ -1,7 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 
-const Camara = ({ onCapturaTomada, activarCamara, onVideoGrabado }) => {
+const Camara = ({ onCapturaTomada, activarCamara, onVideoGrabado, duracionGrabacion = 5000 }) => {
     const videoRef = useRef();
+    const [grabacionIniciada, setGrabacionIniciada] = useState(false);
 
     const comenzarGrabacion = async () => {
         try {
@@ -24,13 +25,16 @@ const Camara = ({ onCapturaTomada, activarCamara, onVideoGrabado }) => {
                 // Restablecer el stream
                 const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 videoRef.current.srcObject = newStream;
+                setGrabacionIniciada(false); // Desactivar la cámara después de la grabación
             };
 
             mediaRecorder.start();
+            setGrabacionIniciada(true);
 
+            // Puedes ajustar el tiempo de grabación según tus necesidades
             setTimeout(() => {
                 mediaRecorder.stop();
-            }, 5000);
+            }, duracionGrabacion);
         } catch (error) {
             console.error('Error al iniciar la grabación:', error);
         }
@@ -41,7 +45,9 @@ const Camara = ({ onCapturaTomada, activarCamara, onVideoGrabado }) => {
             {activarCamara && (
                 <>
                     <video ref={videoRef} autoPlay playsInline muted />
-                    <button onClick={comenzarGrabacion}>Grabar</button>
+                    <button onClick={comenzarGrabacion} disabled={grabacionIniciada}>
+                        {grabacionIniciada ? 'Grabando...' : 'Grabar'}
+                    </button>
                 </>
             )}
         </div>

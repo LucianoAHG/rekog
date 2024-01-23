@@ -71,73 +71,88 @@ def upload_documentos():
         if not hasattr(upload_documentos, 'rekognition_client'):
             upload_documentos.rekognition_client = boto3.client('rekognition')
 
-        if request.method == 'POST':
-            cedula = request.files.get('cedula')
-            video_persona = request.files.get('video_persona')
+        if 'video_cedula' not in request.files or 'video_persona' not in request.files:
+            return jsonify({'error': 'Ambos documentos son requeridos'}), 400
 
-            if not cedula or not video_persona:
-                return jsonify({'error': 'Ambos documentos son requeridos'}), 400
+        video_cedula = request.files['video_cedula']
+        video_persona = request.files['video_persona']
 
-            cedula_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'cedula.jpg')
-            cedula.save(cedula_filename)
+        video_cedula_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'video_cedula.mp4')
+        video_cedula.save(video_cedula_filename)
 
-            video_persona_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'video_persona.mp4')
-            video_persona.save(video_persona_filename)
+        video_persona_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'video_persona.mp4')
+        video_persona.save(video_persona_filename)
 
-            captura_cara_filename = os.path.join(app.config['UPLOAD_FOLDER'], 'captura_cara.jpg')
+        captura_cara_filename_cedula = os.path.join(app.config['UPLOAD_FOLDER'], 'captura_cara_cedula.jpg')
+        captura_cara_filename_persona = os.path.join(app.config['UPLOAD_FOLDER'], 'captura_cara_persona.jpg')
 
-            # Llama a la funcion de captura desde captura_frame.py
-            capture_random_frame_by_fps(video_persona_filename, captura_cara_filename)
+        # Llama a la funcion de captura desde captura_frame.py
+        capture_random_frame_by_fps(video_cedula_filename, captura_cara_filename_cedula)
+        capture_random_frame_by_fps(video_persona_filename, captura_cara_filename_persona)
+        
+        # Subir archivos a S3 despues de la validacion exitosa
+        upload_to_s3(captura_cara_filename_cedula, AWS_BUCKET_NAME, 'captura_cara_cedula.jpg')
+        upload_to_s3(captura_cara_filename_persona, AWS_BUCKET_NAME, 'captura_cara_persona.jpg')
 
-            # Subir archivos a S3 despues de la validacion exitosa
-            upload_to_s3(cedula_filename, AWS_BUCKET_NAME, 'cedula.jpg')
-            upload_to_s3(captura_cara_filename, AWS_BUCKET_NAME, 'captura_cara.jpg')
+        rekognition = boto3.client('rekognition')
 
-            rekognition = boto3.client('rekognition')
+        # Detectar etiquetas en la imagen de origen (cedula)
+        labels_source_cedula = detect_labels(rekognition, AWS_BUCKET_NAME, 'captura_cara_cedula.jpg')
 
-            # Detectar etiquetas en la imagen de origen
-            labels_source = detect_labels(rekognition, AWS_BUCKET_NAME, 'cedula.jpg')
+        # Detectar etiquetas en la imagen de origen (persona)
+        labels_source_persona = detect_labels(rekognition, AWS_BUCKET_NAME, 'captura_cara_persona.jpg')
 
-            # Detectar etiquetas en la segunda imagen
-            labels_target = detect_labels(rekognition, AWS_BUCKET_NAME, 'captura_cara.jpg')
+        # Detectar etiquetas en la segunda imagen (cedula)
+        labels_target_cedula = detect_labels(rekognition, AWS_BUCKET_NAME, 'captura_cara_cedula.jpg')
 
-            similarity_percentage = compare_faces(
-                rekognition, 'cedula.jpg', 'captura_cara.jpg', AWS_BUCKET_NAME
-            )
+        # Detectar etiquetas en la segunda imagen (persona)
+        labels_target_persona = detect_labels(rekognition, AWS_BUCKET_NAME, 'captura_cara_persona.jpg')
 
-            response_data = {
-                'resultado_validacion': {
-                    'success': False,
-                    'error': 'La comparacion ha fallado',
-                    'similarityPercentage': similarity_percentage,
-                    'matchMessage': 'No se encontraron caras similares.',
-                    'labelsData': {
-                        'labels_source': labels_source,
-                        'labels_target': labels_target
-                    }
-                }
+        # Comparar caras en la cedula
+        similarity_percentage_cedula = compare_faces(
+            rekognition, 'captura_cara_cedula.jpg', 'captura_cara_cedula.jpg', AWS_BUCKET_NAME
+        )
+
+        # Comparar caras en la persona
+        similarity_percentage_persona = compare_faces(
+            rekognition, 'captura_cara_persona.jpg', 'captura_cara_persona.jpg', AWS_BUCKET_NAME
+        )
+
+        response_data = {
+            'resultado_validacion': {
+                'success': False,
+                'error': 'La comparacion ha fallado',
+                'similarityPercentageCedula': similarity_percentage_cedula,
+                'similarityPercentagePersona': similarity_percentage_persona,
+                'matchMessageCedula': 'No se encontraron caras similares en la cedula.',
+                'matchMessagePersona': 'No se encontraron caras similares en la persona.',
+                'labelsDataCedula': labels_source_cedula,
+                'labelsDataPersona': labels_source_persona
             }
+        }
 
-            # Validacion de etiqueta "Id Cards" en la cedula
-            if similarity_percentage >= 90.0:
-                if any(label['name'] in ['Id Cards'] for label in labels_source):
-                    response_data['resultado_validacion']['success'] = True
-                    response_data['resultado_validacion']['error'] = None
-                    response_data['resultado_validacion']['matchMessage'] = f'Se valido correctamente su cedula de identidad con un {similarity_percentage}%.'
-                    response_data['resultado_validacion']['message'] = 'La comparacion fue exitosa'
-                    response_data['resultado_validacion']['labelsData']['labels_source'].append({'name': 'Cedula de identidad validada', 'confidence': similarity_percentage})
-                    return jsonify(response_data), 200
-
-            elif 80.0 <= similarity_percentage < 90.0:
-                response_data['resultado_validacion']['matchMessage'] = f'Se requiere revision. Similitud: {similarity_percentage}%.'
-                return jsonify(response_data), 403
-
-            elif similarity_percentage <= 10:
-                response_data['resultado_validacion']['matchMessage'] = f'No se encontraron caras similares. Similitud: {similarity_percentage}%.'
-                return jsonify(response_data), 402
-
+        # Validacion de etiqueta "Id Cards" en la cedula
+        if similarity_percentage_cedula >= 90.0:
+            if any(label['name'] in ['Id Cards'] for label in labels_source_cedula):
+                response_data['resultado_validacion']['matchMessageCedula'] = f'Se valido correctamente la cedula con un {similarity_percentage_cedula}%.'
             else:
-                return jsonify(response_data), 401
+                response_data['resultado_validacion']['matchMessageCedula'] = 'Cedula no valida: Etiqueta incorrecta.'
+                
+        # Validacion de etiqueta "Portrait" en la persona
+        if similarity_percentage_persona >= 90.0:
+            if any(label['name'] in ['Portrait'] for label in labels_source_persona):
+                response_data['resultado_validacion']['matchMessagePersona'] = f'Se valido correctamente la persona con un {similarity_percentage_persona}%.'
+            else:
+                response_data['resultado_validacion']['matchMessagePersona'] = 'Persona no valida: Etiqueta incorrecta.'
+
+        # Mostrar respuesta segun los resultados de la validacion
+        if similarity_percentage_cedula >= 90.0 and similarity_percentage_persona >= 90.0:
+            response_data['resultado_validacion']['success'] = True
+            response_data['resultado_validacion']['error'] = None
+            response_data['resultado_validacion']['message'] = 'La comparacion fue exitosa'
+            return jsonify(response_data), 200
+        else:
+            return jsonify(response_data), 401
 
     except Exception as e:
         return jsonify({'error': f'Error en la carga y validacion: {str(e)}'}), 500

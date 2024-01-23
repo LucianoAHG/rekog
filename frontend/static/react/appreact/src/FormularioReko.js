@@ -3,94 +3,77 @@ import Camara from './Camara';
 import './formrek.css';
 
 const FormularioReko = () => {
-    const [cedula, setCedula] = useState(null);
+    const [capturaCedula, setCapturaCedula] = useState(null);
     const [capturaCara, setCapturaCara] = useState(null);
     const [activarCamara, setActivarCamara] = useState(false);
     const [resultadoValidacion, setResultadoValidacion] = useState(null);
     const [etiquetasCedula, setEtiquetasCedula] = useState([]);
     const [etiquetasCapturaCara, setEtiquetasCapturaCara] = useState([]);
-
-    // Ref para almacenar el temporizador de grabación
     const grabacionRef = useRef(null);
 
-    const handleCedulaChange = (e) => {
-        // Validar la extensión del archivo
-        const file = e.target.files[0];
-        if (file && !validateFileExtension(file.name)) {
-            alert('La cédula debe ser un archivo con extensión .jpg');
-            return;
+    const handleCapturaTomada = (capturaBase64, tipo) => {
+        if (tipo === 'cedula') {
+            setCapturaCedula(capturaBase64);
+        } else {
+            setCapturaCara(capturaBase64);
         }
 
-        setCedula(file);
-
-        // Limpiar las etiquetas cuando se selecciona una nueva cédula
         setEtiquetasCedula([]);
-    };
-
-    const handleCapturaTomada = (capturaBase64) => {
-        setCapturaCara(capturaBase64);
-
-        // Limpiar las etiquetas cuando se toma una nueva captura de cara
         setEtiquetasCapturaCara([]);
     };
 
-    const handleVideoGrabado = (videoBlob) => {
-        setCapturaCara(videoBlob);
+    const handleVideoGrabado = (videoBlob, tipo) => {
+        if (tipo === 'cedula') {
+            setCapturaCedula(videoBlob);
+        } else {
+            setCapturaCara(videoBlob);
+        }
     };
 
     const iniciarCapturaVideo = () => {
-        // Iniciar la captura de video
-        setCapturaCara(null);  // Limpiar cualquier captura existente
+        setCapturaCedula(null);
+        setCapturaCara(null);
         grabacionRef.current = setTimeout(detenerCapturaVideo, 5000);
     };
 
     const detenerCapturaVideo = () => {
-        // Detener la captura de video
-        setCapturaCara(null);  // Limpiar cualquier captura existente
+        setCapturaCedula(null);
+        setCapturaCara(null);
         clearTimeout(grabacionRef.current);
     };
 
     const toggleActivarCamara = () => {
         setActivarCamara(!activarCamara);
 
-        // Limpiar el temporizador de grabación al desactivar la cámara
         if (!activarCamara) {
             clearTimeout(grabacionRef.current);
         }
     };
 
     const handleSubmit = async () => {
-        // Lógica para enviar los documentos al backend
         try {
-            // Crear un objeto FormData para enviar los archivos al backend
             const formData = new FormData();
-            formData.append('cedula', cedula);
+            formData.append('video_cedula', capturaCedula);
             formData.append('video_persona', capturaCara);
 
-            // Realizar la solicitud al backend para subir documentos y realizar la validación
             const response = await fetch('http://localhost:5000/upload_documentos', {
                 method: 'POST',
                 body: formData,
             });
 
-            // Manejar la respuesta del backend
             const data = await response.json();
             setResultadoValidacion(data.resultado_validacion);
 
-            // Almacenar etiquetas de la cédula y de la captura de cara en el estado
-            if (data.resultado_validacion.labelsData) {
-                setEtiquetasCedula(data.resultado_validacion.labelsData.labels_source);
-                setEtiquetasCapturaCara(data.resultado_validacion.labelsData.labels_target);
+            if (data.resultado_validacion.labelsDataCedula) {
+                setEtiquetasCedula(data.resultado_validacion.labelsDataCedula);
+            }
+
+            if (data.resultado_validacion.labelsDataPersona) {
+                setEtiquetasCapturaCara(data.resultado_validacion.labelsDataPersona);
             }
         } catch (error) {
-            console.error('Error al enviar documentos al backend:', error);
+            console.error('Error al enviar videos al backend:', error);
         }
-    };
-
-    const validateFileExtension = (fileName) => {
-        const allowedExtensions = ['.jpg'];
-        const fileExtension = fileName.slice(((fileName.lastIndexOf(".") - 1) >>> 0) + 2);
-        return allowedExtensions.includes('.' + fileExtension.toLowerCase());
     };
 
     return (
@@ -100,32 +83,21 @@ const FormularioReko = () => {
             </div>
 
             <div id="formulario" className="form-section">
-                <div id="contenedor" className="label-container">
-                    <div>
-                        <div id="contenedorcedula">
-                            <label id="titulocedula" htmlFor="cedula">
-                                Subir cedula:
-                            </label>
-                        </div>
-                    </div>
-                    <div>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            id="cedula"
-                            name="cedula"
-                            onChange={handleCedulaChange}
-                        />
-                    </div>
+                <label>Captura de video (Cédula):</label>
+                <div id="capturacedula" className="label-container">
+                    <Camara
+                        onCapturaTomada={(capturaBase64) => handleCapturaTomada(capturaBase64, 'cedula')}
+                        activarCamara={activarCamara}
+                        onVideoGrabado={(videoBlob) => handleVideoGrabado(videoBlob, 'cedula')}
+                    />
                 </div>
 
-                <label>Captura de video:</label>
-
+                <label>Captura de video (Persona):</label>
                 <div id="capturavideo" className="label-container">
                     <Camara
-                        onCapturaTomada={handleCapturaTomada}
+                        onCapturaTomada={(capturaBase64) => handleCapturaTomada(capturaBase64, 'persona')}
                         activarCamara={activarCamara}
-                        onVideoGrabado={handleVideoGrabado}
+                        onVideoGrabado={(videoBlob) => handleVideoGrabado(videoBlob, 'persona')}
                     />
                 </div>
             </div>
@@ -134,7 +106,7 @@ const FormularioReko = () => {
                 {activarCamara ? 'Desactivar Cámara' : 'Activar Cámara'}
             </button>
             <button onClick={iniciarCapturaVideo}>Iniciar Grabación de Video</button>
-            <button onClick={handleSubmit}>Enviar Documentos</button>
+            <button onClick={handleSubmit}>Enviar Videos</button>
 
             {etiquetasCedula.length > 0 && (
                 <div>
@@ -143,7 +115,6 @@ const FormularioReko = () => {
                         {etiquetasCedula.map((etiqueta, index) => (
                             <li key={index}>{`${etiqueta.name}: ${etiqueta.confidence.toFixed(2)}%`}</li>
                         ))}
-                        <li>Cedula de identidad Validada</li>
                     </ul>
                 </div>
             )}
@@ -161,8 +132,8 @@ const FormularioReko = () => {
 
             {resultadoValidacion && (
                 <div>
-                    <h3>Resultado de Validación</h3>
-                    <p>Exito: {resultadoValidacion.success ? 'Si' : 'No, debe intentar nuevamente.'}</p>
+                    <h3>Resultado de Validacion</h3>
+                    <p>exito: {resultadoValidacion.success ? 'Sí' : 'No, debe intentar nuevamente.'}</p>
                     <p>Mensaje: {resultadoValidacion.message}</p>
                     {resultadoValidacion.success && (
                         <>

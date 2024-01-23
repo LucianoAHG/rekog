@@ -44,5 +44,10 @@ def capture_random_frame_by_fps(video_path, output_path):
 
 # Uso de la funcion con las rutas absolutas
 video_persona_filename = 'C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/video_persona.mp4'
-captura_cara_filename = 'C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/captura_cara.jpg'
+captura_cara_filename = 'C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/captura_cara_persona.jpg'
 capture_random_frame_by_fps(video_persona_filename, captura_cara_filename)
+
+# Uso de la funcion para el segundo video y captura
+video_cedula_filename = 'C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/video_cedula.mp4'
+captura_cedula_filename = 'C:/Users/desar/OneDrive/Escritorio/rekog/backend/Documentos/captura_cara_cedula.jpg'
+capture_random_frame_by_fps(video_cedula_filename, captura_cedula_filename)
