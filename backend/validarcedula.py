@@ -1,76 +1,39 @@
-# Importamos librerias
 import cv2
-import pytesseract   # Libreria detección de texto
-import re
+import pytesseract
 
-# Variables
-cuadro = 100
-doc = 0
+def detectar_tarjeta_identificacion(imagen):
+    # Convierte la imagen a escala de grises
+    gris = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
 
-# Captura de video
-cap = cv2.VideoCapture(1)
-cap.set(3, 1280)
-cap.set(4, 720)
+    # Aplica un umbral para resaltar características
+    _, umbral = cv2.threshold(gris, 128, 255, cv2.THRESH_BINARY)
 
-def texto(image):
-    global doc
-    # Variables
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-    # Escala de grises
-    gris = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # Umbral
-    umbral = cv2.adaptiveThreshold(gris, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 55, 25)
+    # Encuentra contornos en la imagen umbralizada
+    contornos, _ = cv2.findContours(umbral, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Configuracion del OCR
-    config = "--psm 1"
-    texto = pytesseract.image_to_string(umbral, config=config)
+    for contorno in contornos:
+        # Aproxima un polígono al contorno
+        epsilon = 0.02 * cv2.arcLength(contorno, True)
+        aproximacion = cv2.approxPolyDP(contorno, epsilon, True)
 
-    # Palabras clave Chile
-    secchile = r'CHILE'
-    secchile2 = r'IDENTIFICACION'
+        # Si el polígono tiene cuatro vértices, se considera una tarjeta de identificación
+        if len(aproximacion) == 4:
+            return True
 
-    buschile = re.findall(secchile, texto)
-    buschile2 = re.findall(secchile2, texto)
+    return False
 
-    print(texto)
+def extraer_informacion_ocr(imagen):
+    # Utiliza Tesseract OCR para extraer texto de la imagen
+    texto_extraido = pytesseract.image_to_string(imagen, lang='eng')
 
-    # Si es de Chile
-    if len(buschile) != 0 and len(buschile2) != 0:
-        doc = 1
+    return texto_extraido
 
-# Empezamos
-while True:
-    # Lectura de la VideoCaptura
-    ret, frame = cap.read()
+# Ejemplo de uso
+ruta_imagen = 'documentos/captura_cara_cedula.jpg'
+imagen = cv2.imread(ruta_imagen)
 
-    # 'Interfaz'
-    cv2.putText(frame, 'Ubique el documento de identidad', (458, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.71, (0, 255, 0), 2)
-    cv2.rectangle(frame, (cuadro, cuadro), (1280 - cuadro, 720 - cuadro), (0, 255, 0), 2)
-
-    # Reset ID
-    if doc == 0:
-        cv2.putText(frame, 'PRESIONA S PARA IDENTIFICAR', (470, 750 - cuadro), cv2.FONT_HERSHEY_SIMPLEX, 0.71, (0, 255, 0), 2)
-        # print(" LISTO PARA DETECTAR ID")
-
-    elif doc == 1:
-        cv2.putText(frame, 'IDENTIFICACION CHILENA', (470, 750 - cuadro), cv2.FONT_HERSHEY_SIMPLEX, 0.71, (0, 255, 255), 2)
-        print('Cédula de Identidad Chilena')
-
-    t = cv2.waitKey(1)
-    # Funcion Texto
-
-    # Reset [R] [r]
-    if t == 82 or t == 114:
-        doc = 0
-
-    # Scan [S] [s]
-    if t == 83 or t == 115:
-        texto(frame)
-
-    # Mostramos FPS
-    cv2.imshow("ID INTELIGENTE", frame)
-    if t == 27:
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+if detectar_tarjeta_identificacion(imagen):
+    informacion_extraida = extraer_informacion_ocr(imagen)
+    print(f"Información extraída de la tarjeta de identificación:\n{informacion_extraida}")
+else:
+    print("No se detectó una tarjeta de identificación en la imagen.")

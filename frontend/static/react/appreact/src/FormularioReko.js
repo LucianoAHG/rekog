@@ -83,7 +83,7 @@ const FormularioReko = () => {
             </div>
 
             <div id="formulario" className="form-section">
-                <label>Captura de video (Cédula):</label>
+                <label id="titulocedula">Captura de video (Cedula):</label>
                 <div id="capturacedula" className="label-container">
                     <Camara
                         onCapturaTomada={(capturaBase64) => handleCapturaTomada(capturaBase64, 'cedula')}
@@ -92,9 +92,9 @@ const FormularioReko = () => {
                     />
                 </div>
 
-                <label>Captura de video (Persona):</label>
+                <label id="titulovideopersona">Captura de video (Persona):</label>
                 <div id="capturavideo" className="label-container">
-                    <Camara
+                    <Camara 
                         onCapturaTomada={(capturaBase64) => handleCapturaTomada(capturaBase64, 'persona')}
                         activarCamara={activarCamara}
                         onVideoGrabado={(videoBlob) => handleVideoGrabado(videoBlob, 'persona')}
@@ -102,15 +102,14 @@ const FormularioReko = () => {
                 </div>
             </div>
 
-            <button onClick={toggleActivarCamara}>
-                {activarCamara ? 'Desactivar Cámara' : 'Activar Cámara'}
+            <button id="botonactivar" onClick={toggleActivarCamara}>
+                {activarCamara ? 'Desactivar Camara' : 'Activar Camara'}
             </button>
-            <button onClick={iniciarCapturaVideo}>Iniciar Grabación de Video</button>
-            <button onClick={handleSubmit}>Enviar Videos</button>
-
+            <button id="enviarvideos" onClick={handleSubmit}>Enviar Videos</button>
+            <div id="contenedorresultados">
             {etiquetasCedula.length > 0 && (
-                <div>
-                    <h3>Etiquetas detectadas en la cédula:</h3>
+                <div id="etiquetascedula">
+                    <h3>Etiquetas detectadas en la cedula:</h3>
                     <ul>
                         {etiquetasCedula.map((etiqueta, index) => (
                             <li key={index}>{`${etiqueta.name}: ${etiqueta.confidence.toFixed(2)}%`}</li>
@@ -120,7 +119,7 @@ const FormularioReko = () => {
             )}
 
             {etiquetasCapturaCara.length > 0 && (
-                <div>
+                <div id="etiquetascara">
                     <h3>Etiquetas detectadas en la captura de cara:</h3>
                     <ul>
                         {etiquetasCapturaCara.map((etiqueta, index) => (
@@ -128,12 +127,12 @@ const FormularioReko = () => {
                         ))}
                     </ul>
                 </div>
-            )}
+                )}</div>
 
             {resultadoValidacion && (
-                <div>
+                <div id="resultadosvalidacion">
                     <h3>Resultado de Validacion</h3>
-                    <p>exito: {resultadoValidacion.success ? 'Sí' : 'No, debe intentar nuevamente.'}</p>
+                    <p>Exito: {resultadoValidacion.success ? 'Si' : 'No, debe intentar nuevamente.'}</p>
                     <p>Mensaje: {resultadoValidacion.message}</p>
                     {resultadoValidacion.success && (
                         <>

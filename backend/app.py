@@ -91,6 +91,8 @@ def upload_documentos():
         capture_random_frame_by_fps(video_persona_filename, captura_cara_filename_persona)
         
         # Subir archivos a S3 despues de la validacion exitosa
+        upload_to_s3(video_cedula_filename, AWS_BUCKET_NAME, 'video_cedula.mp4')
+        upload_to_s3(video_persona_filename, AWS_BUCKET_NAME, 'video_persona.mp4')
         upload_to_s3(captura_cara_filename_cedula, AWS_BUCKET_NAME, 'captura_cara_cedula.jpg')
         upload_to_s3(captura_cara_filename_persona, AWS_BUCKET_NAME, 'captura_cara_persona.jpg')
 
